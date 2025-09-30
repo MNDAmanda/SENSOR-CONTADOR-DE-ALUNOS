@@ -1,0 +1,105 @@
+// LCD module connections
+sbit LCD_RS at Rc2_bit;
+sbit LCD_EN at Rc3_bit;
+sbit LCD_D4 at Rc4_bit;
+sbit LCD_D5 at Rc5_bit;
+sbit LCD_D6 at Rc6_bit;
+sbit LCD_D7 at Rc7_bit;
+
+sbit LCD_RS_Direction at TRISc2_bit;
+sbit LCD_EN_Direction at TRISc3_bit;
+sbit LCD_D4_Direction at TRISc4_bit;
+sbit LCD_D5_Direction at TRISc5_bit;
+sbit LCD_D6_Direction at TRISc6_bit;
+sbit LCD_D7_Direction at TRISc7_bit;
+// End LCD module connections
+
+#define s1 rb0_bit
+#define s2 rb1_bit
+#define ar_condicionado rc0_bit //no proteus identificado como led azul
+#define led_vermelho rc1_bit  //vai servir como alerta visual para limite atingido de alunos
+#define lampada ra0_bit  //no proteus identificado como led branco 
+
+char alunos=0;
+char txt[4];
+
+void mostra_lcd() {
+    if (alunos >= 40) {
+        lcd_out(1, 1, "AGUARDAR         "); //ao chegar no 40 emite mensagem de aguarde para os demais alunos que estiverem fora de sala
+        lcd_out(2, 1, "LIMITE ATINGIDO");  //avisa e acende o led vermelho 
+        lcd_cmd(_lcd_cursor_off);  //ao  enviar a mensagem o LCD nao mostra o cursor 
+        led_vermelho=1;
+    } else {
+        ByteToStrWithZeros(alunos, txt);
+        lcd_out(1, 1,"ALUNOS PRESENTES      "); 
+        lcd_out(2, 1,"ATUALMENTE:       "); //contagem normal de alunos 
+        led_vermelho=0;
+        lcd_out(2, 13, txt); //saída da mensagem para o LCD confrome comandos 
+    }
+    if (alunos >=15) {
+      ar_condicionado=1;  //caso entre no minimo 15 alunos liga o ar condicionado 
+      }else{
+      ar_condicionado=0;
+      }
+      if (alunos>=1) { //ao entrar o primeiro aluno a lampada liga 
+      lampada=1;
+      }else{
+      lampada=0; //ao sair todos a lampada se desligará
+      }
+}
+
+void main() {
+ //===============inicialização==============//
+            trisa=0;
+            trisb=255;
+            trisc=0;
+            porta=0,portb=0,portc=0;
+            option_reg=0;
+
+            lcd_init();
+            lcd_out(1,1, "BOA NOITE A TODOS");
+            lcd_cmd(_lcd_cursor_off);
+            lcd_out(2,1,"SEJAM BEM VINDOS");
+            lcd_cmd(_lcd_cursor_off);
+            delay_ms(2000);
+            lcd_out(1,1,"ALUNOS PRESENTES     ");
+            lcd_cmd(_lcd_cursor_off);
+            lcd_out(2,1, "ATUALMENTE:         ");
+
+     // Loop principal para logica dos sensores
+    while (1) {
+
+        // ==== DETECTA ENTRADA (s1 -> s2) incremento na contagem ============//
+        if (!s1) {                 // s1 pressionado
+            while (!s1);           // espera s1 ser solto (evita bounce)
+            delay_ms(50);        // debounce simples
+
+            if (!s2) {             // depois s2 pressionado
+                while (!s2);       // espera s2 ser solto
+                delay_ms(50);
+
+                if (alunos < 40) {
+                    alunos++;
+                    mostra_lcd();
+                }
+            }
+        }
+
+        // ==== DETECTA SAÍDA (s2 -> s1) decremento na contagem ========//
+        if (!s2) {                 // s2 pressionado
+            while (!s2);           // espera s2 ser solto
+            delay_ms(50);
+
+            if (!s1) {             // depois s1 pressionado
+                while (!s1);       // espera s1 ser solto
+                delay_ms(50);
+
+                if (alunos > 0) {
+                    alunos--;
+                    mostra_lcd();
+                }
+            }
+        }
+
+    }
+}
